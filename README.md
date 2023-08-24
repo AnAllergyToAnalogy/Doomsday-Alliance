@@ -61,4 +61,5 @@ Relevant warnings will be placed on the Alliance website interface, however the 
 The Alliance is designed to operate effectively at the speed that Doomsday: Settlers of the Wasteland plays out. 
 For example, always being able to Reinforce a Settlement in the 75 Block disaster window, or obscuring the resources of an Alliance, while properly compensating users who contribute.
 
-For a completely trustless solution, we recommend using a regular Multisig contract."# Doomsday-Alliance" 
+For a completely trustless solution, we recommend using a regular Multisig contract.
+
