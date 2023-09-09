@@ -20,6 +20,8 @@ contract DoomsdayAlliance{
 
     event Fund(address indexed _funder, uint value);
     event Contribute(address indexed _contributor, uint _tokenId);
+    event Member(address indexed _member);
+    event Leader(address indexed _leader, bool promoted);
 
     string public name;
     string public symbol;
@@ -27,6 +29,8 @@ contract DoomsdayAlliance{
     uint16 immutable age;
     mapping(address => bool) members;
     mapping(address => bool) leaders;
+    address[] public memberList;
+
     uint public totalSupply;
     mapping(address => uint) public balanceOf;
 
@@ -47,12 +51,12 @@ contract DoomsdayAlliance{
         uint16 _age
     ){
         return (
-        settlementValue,
-        winningTokenBurned,
-        acquired,
-        contribution,
-        getAcquisitionPrice(),
-        age
+            settlementValue,
+            winningTokenBurned,
+            acquired,
+            contribution,
+            getAcquisitionPrice(),
+            age
         );
     }
 
@@ -62,9 +66,9 @@ contract DoomsdayAlliance{
         uint _acquisitionPrice
     ){
         return (
-        members[_address],
-        leaders[_address],
-        acquisitionPrices[_address]
+            members[_address],
+            leaders[_address],
+            acquisitionPrices[_address]
         );
     }
 
@@ -87,6 +91,11 @@ contract DoomsdayAlliance{
 
         members[_founder] = true;
         leaders[_founder] = true;
+        memberList.push(_founder);
+
+
+        emit Member(_founder);
+        emit Leader(_founder,true);
     }
 
     function initialShares(address _founder, uint value) external{
@@ -109,14 +118,14 @@ contract DoomsdayAlliance{
 
     function requireGameOver(bool _isOver) internal view{
         (
-        bool _itIsTheDawnOfANewAge,
-        uint32 _firstSettlement,
-        uint16 _age,
-        uint80 _creatorEarnings,
-        uint80 _relics,
-        uint80 _supplies,
-        address _creator,
-        uint256 _blockNumber
+            bool _itIsTheDawnOfANewAge,
+            uint32 _firstSettlement,
+            uint16 _age,
+            uint80 _creatorEarnings,
+            uint80 _relics,
+            uint80 _supplies,
+            address _creator,
+            uint256 _blockNumber
         ) = settlers.currentState();
 
         _firstSettlement;
@@ -151,23 +160,27 @@ contract DoomsdayAlliance{
 
     function addMember(address _member) public onlyLeader{
         members[_member] = true;
+        memberList.push(_member);
+
+        emit Member(_member);
     }
     function promoteMember(address _member, bool _promote) public onlyLeader{
         require(members[_member],"member");
         require(_member != msg.sender,"self");
         leaders[_member] = _promote;
-    }
 
+        emit Leader(_member,_promote);
+    }
 
     function getMintCost() internal view returns(uint80){
         (
-        bytes32 _lastHash,
-        uint32 _settled,
-        uint32 _abandoned,
-        uint32 _lastSettleBlock,
-        uint32 _collapseBlock,
-        uint80 _mintFee,
-        uint256 _blockNumber
+            bytes32 _lastHash,
+            uint32 _settled,
+            uint32 _abandoned,
+            uint32 _lastSettleBlock,
+            uint32 _collapseBlock,
+            uint80 _mintFee,
+            uint256 _blockNumber
         ) = settlers.miningState();
 
         _lastHash;
@@ -182,7 +195,6 @@ contract DoomsdayAlliance{
 
     function addSettlements(uint[] calldata _tokenIds) public canContribute(true) notAcquired {
         requireGameOver(false);
-
         uint _shareValue;
         if(settlementValue == 0){
             //get mint cost
@@ -210,23 +222,11 @@ contract DoomsdayAlliance{
         emit Transfer(address(0),msg.sender,msg.value);
     }
 
-    function reinforce(uint32 _tokenId, bool[4] calldata _resources, uint _cost) external payable onlyMember{
-        if(msg.value > 0){
-            fundAlliance();
-        }
-        settlers.reinforce{value:_cost}(_tokenId,_resources);
-    }
     function multiTokenReinforce(uint32[] memory _tokenIds, uint80[4][] memory _currentLevels, uint80[4][] memory _extraLevels, uint8[] memory _highest, uint80 _baseCost, uint _cost) external payable onlyMember notAcquired{
         if(msg.value > 0){
             fundAlliance();
         }
         batcher.multiTokenReinforce{value:_cost}(_tokenIds, _currentLevels, _extraLevels, _highest, _baseCost);
-    }
-    function multiLevelReinforce(uint32 _tokenId, uint80[4] memory _currentLevels, uint80[4] memory _extraLevels, uint80 _highest, uint80 _baseCost, uint _cost) external payable onlyMember notAcquired{
-        if(msg.value > 0){
-            fundAlliance();
-        }
-        batcher.multiLevelReinforce{value:_cost}(_tokenId, _currentLevels, _extraLevels, _highest, _baseCost);
     }
 
     function setAcquisitionPrice(uint _price) public onlyMember{
@@ -255,14 +255,14 @@ contract DoomsdayAlliance{
         acquired = msg.sender;
 
         (
-        bool _itIsTheDawnOfANewAge,
-        uint32 _firstSettlement,
-        uint16 _age,
-        uint80 _creatorEarnings,
-        uint80 _relics,
-        uint80 _supplies,
-        address _creator,
-        uint256 _blockNumber
+            bool _itIsTheDawnOfANewAge,
+            uint32 _firstSettlement,
+            uint16 _age,
+            uint80 _creatorEarnings,
+            uint80 _relics,
+            uint80 _supplies,
+            address _creator,
+            uint256 _blockNumber
         ) = settlers.currentState();
 
         _itIsTheDawnOfANewAge;
@@ -275,7 +275,6 @@ contract DoomsdayAlliance{
 
 
         payable(_creator).transfer(msg.value * 5 / 100);
-
     }
     function removeTokens(uint[] calldata _tokenIds) public{
         require(msg.sender == acquired,"sender");
@@ -290,12 +289,12 @@ contract DoomsdayAlliance{
 
     function abandonWinningToken(uint32 _tokenId,uint32 _data) public onlyMember notAcquired{
         (
-        uint32 _settleBlock,
-        uint24 supplyAtMint,
-        uint16 _age,
-        uint8 settlementType,
-        uint80 relics,
-        uint80 supplies
+            uint32 _settleBlock,
+            uint24 supplyAtMint,
+            uint16 _age,
+            uint8 settlementType,
+            uint80 relics,
+            uint80 supplies
         ) = settlers.settlements(_tokenId);
 
         _settleBlock;
@@ -304,7 +303,6 @@ contract DoomsdayAlliance{
         settlementType;
 
         require (supplies > 0 || relics > 0,"victory");
-
 
         uint32[] memory _tokenIds = new uint32[](   1   );
         _tokenIds[0] = _tokenId;
@@ -325,14 +323,8 @@ contract DoomsdayAlliance{
         delete balanceOf[msg.sender];
         totalSupply -= _balanceOf;
 
-        if(_payout > address(this).balance){
-            _payout = address(this).balance;
-        }
-
         emit Transfer(msg.sender,address(0),_payout);
         payable(msg.sender).transfer(_payout);
-
-
     }
 
     function confirmDisaster(uint32 _tokenId, uint32 _data) public onlyMember notAcquired{
